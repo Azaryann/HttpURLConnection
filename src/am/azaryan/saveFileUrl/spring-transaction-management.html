@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-6086234-7"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-6086234-7');
+    </script>
+    <title>Управление транзакциями в Spring</title>
+    <meta name="description" content="Управление транзакциями в Spring с примерами на Java" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" content="width=device-width, initial-scale=1" />
+
+
+
+    <link rel="stylesheet" type="text/css" href="/css/w3.css" />
+    <link rel="stylesheet" type="text/css" href="/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="/css/hl.css" />
+    <link rel="canonical" href="https://devmark.ru/article/spring-transaction-management" />
+    
+    <style>
+        html, body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+        }
+
+        h1, h2, h3 {
+            font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+            font-weight: bold;
+        }
+    </style>
+
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/utils.js"></script>
+</head>
+<body>
+<div class="w3-bar w3-green">
+    <a href="/" class="w3-bar-item w3-button">Статьи</a>
+    <form role="search" method="get" action="/">
+        <input type="text" class="w3-bar-item w3-input w3-border" placeholder="Поиск статей..." name="q">
+    </form>
+    <a href="https://www.youtube.com/channel/UCl3t4f1wWuYJqfVtkLDNTNg" class="w3-bar-item w3-button">YouTube-канал</a>
+    <div class="w3-dropdown-hover">
+        <button class="w3-button">Утилиты <i class="fa fa-caret-down"></i></button>
+        <div class="w3-dropdown-content w3-bar-block w3-card-4">
+            <a href="/tools/password-generator" class="w3-bar-item w3-button">Генератор паролей</a>
+            <a href="/tools/uids" class="w3-bar-item w3-button">UUID генератор</a>
+            <a href="/tools/random-numbers" class="w3-bar-item w3-button">Генератор случайных чисел</a>
+            <a href="/tools/list" class="w3-bar-item w3-button">Редактирование списков</a>
+            <a href="/tools/numeral-system" class="w3-bar-item w3-button">Системы счисления</a>
+            <a href="/tools/translit" class="w3-bar-item w3-button">Транслит</a>
+            <a href="/tools/md5" class="w3-bar-item w3-button">md5 хеш</a>
+            <a href="/tools/sha256" class="w3-bar-item w3-button">SHA-256 хеш</a>
+            <a href="/tools/crc32" class="w3-bar-item w3-button">CRC-32</a>
+            <a href="/tools/unix-time" class="w3-bar-item w3-button">Unix-время</a>
+            <a href="/tools/url" class="w3-bar-item w3-button">URL-encode</a>
+            <a href="/tools/base64" class="w3-bar-item w3-button">Base64</a>
+            <a href="/tools/format-xml" class="w3-bar-item w3-button">Форматирование XML</a>
+            <a href="/tools/my-ip" class="w3-bar-item w3-button">Ваш внешний IP</a>
+            <a href="/tools/number2text" class="w3-bar-item w3-button">Число прописью</a>
+        </div>
+    </div>
+    <a href="/feedback" class="w3-bar-item w3-button">Отзывы</a>
+</div>
+<br>
+<div class="w3-container">
+    <div class="w3-row">
+        <div class="w3-col m2">
+            <p></p>
+        </div>
+        <div class="w3-col m6">
+            <h1>Управление транзакциями в Spring</h1>
+            <p>
+                <button onclick="window.history.back()" class="w3-button w3-white w3-border w3-round">Вернуться назад</button>
+                <span class="w3-right">
+                    
+                    
+                </span>
+            </p>
+            <p><span class="w3-text-gray">22 февраля 2020</span></p>
+            <p><strong>Тэги:</strong>
+                <span>
+                    <a href="/articles/tag/java-10" class="w3-text-blue w3-hover-text-orange">Java 10</a>,
+                </span><span>
+                    <a href="/articles/tag/spring" class="w3-text-blue w3-hover-text-orange">Spring</a>,
+                </span><span>
+                    <a href="/articles/tag/spring-data" class="w3-text-blue w3-hover-text-orange">Spring Data</a>.
+                </span>
+            </p>
+            <div><p><strong>Транзакцией</strong> называется набор связанных операций, все из которых должны быть выполнены корректно без ошибок. Если при выполнении одной из операций возникла ошибка, все остальные должны быть отменены. Прежде всего такой механизм применяется при работе с БД.</p>
+<p><strong>Spring</strong> предлагает очень простой декларативный способ управления транзакциями. Вам достаточно добавить <strong>@org.springframework.transaction.annotation.Transactional</strong> к публичному сервисному методу, и все операции внутри этого метода будут выполняться в транзакции. При выходе из метода транзакция будет завершена (операция <strong>commit</strong> в терминах БД) автоматически. Если в процессе работы возникнет исключение и оно не будет перехвачено внутри метода, транзакция будет отменена (операция <strong>rollback</strong>) и все данные вернуться в то состояние, в котором они были до начала транзакции.</p>
+<p>Предположим, у нас есть метод в спринговом сервисе, который выполняет несколько запросов в БД. Для простоты можно использовать <strong>Spring Data</strong>, чтобы оперировать записями в БД в ООП стиле.</p>
+<p>Сама сущность, которую мы сохраняем в базу, имеет следующий вид:</p>
+<div class="hl-div">
+<span class="hl-ann">@Entity</span><br />
+<span class="hl-key">public</span> <span class="hl-key">class</span> Record {<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-ann">@Id</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-ann">@GeneratedValue</span>(strategy = GenerationType.<span class="hl-con">IDENTITY</span>)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">private</span> <span class="hl-key">int</span> id;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">private</span> String name;<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-com">// get- и set-методы...</span><br />
+}
+</div>
+<p>Слой <strong>dao</strong>, представляющий базовые методы для сохранения данной сущности в БД выглядит так:</p>
+<div class="hl-div">
+<span class="hl-key">public</span> <span class="hl-key">interface</span> ExampleDao <span class="hl-key">extends</span> CrudRepository&lt;Record, Integer&gt; {<br />
+}
+</div>
+<p>Теперь создадим метод в сервисном слое, который сначала создаёт сущность, сохраняет её в БД, затем обновляет её имя. То есть сначала в БД происходит запрос <strong>insert</strong>, затем <strong>update</strong>.</p>
+<div class="hl-div">
+<span class="hl-ann">@Service</span><br />
+<span class="hl-key">public</span> <span class="hl-key">class</span> ExampleService {<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">private</span> <span class="hl-key">final</span> ExampleDao exampleDao;<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">public</span> ExampleService(ExampleDao exampleDao) {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">this</span>.exampleDao = exampleDao;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">public</span> <span class="hl-key">void</span> doTransaction() {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">var</span> record = <span class="hl-key">new</span> Record();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;record.setName(<span class="hl-str">&quot;created&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exampleDao.save(record); <span class="hl-com">// insert</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;record.setName(<span class="hl-str">&quot;updated&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exampleDao.save(record); <span class="hl-com">// update</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+}
+</div>
+<p>Сервисный метод вызывается из контроллера при помощи POST-запроса:</p>
+<div class="hl-div">
+<span class="hl-ann">@RestController</span><br />
+<span class="hl-key">public</span> <span class="hl-key">class</span> ExampleController {<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">private</span> <span class="hl-key">final</span> ExampleService exampleService;<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">public</span> ExampleController(ExampleService exampleService) {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">this</span>.exampleService = exampleService;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-ann">@PostMapping</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">public</span> <span class="hl-key">void</span> doTransaction() {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exampleService.doTransaction();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+}
+</div>
+<p>Данный код всегда работает без ошибок. А теперь добавим между созданием и обновлением записи в БД ошибку.</p>
+<div class="hl-div">
+<span class="hl-key">public</span> <span class="hl-key">void</span> doTransaction() {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">var</span> record = <span class="hl-key">new</span> Record();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;record.setName(<span class="hl-str">&quot;created&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;exampleDao.save(record);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">if</span> (record.getId() &gt; <span class="hl-num">0</span>) {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">throw</span> <span class="hl-key">new</span> RuntimeException();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+&nbsp;&nbsp;&nbsp;&nbsp;record.setName(<span class="hl-str">&quot;updated&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;exampleDao.save(record);<br />
+}
+</div>
+<p>Если мы выполним данный код, то увидим, что новая запись была добавлена в таблицу, но до обновления дело уже не дошло. Чтобы держать наши данные согласованными, достаточно добавить к методу вышеупомянутую аннотацию:</p>
+<div class="hl-div">
+<span class="hl-ann">@Transactional</span><br />
+<span class="hl-key">public</span> <span class="hl-key">void</span> doTransaction() {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">var</span> record = <span class="hl-key">new</span> Record();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;record.setName(<span class="hl-str">&quot;created&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;exampleDao.save(record);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">if</span> (record.getId() &gt; <span class="hl-num">0</span>) {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">throw</span> <span class="hl-key">new</span> RuntimeException();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+&nbsp;&nbsp;&nbsp;&nbsp;record.setName(<span class="hl-str">&quot;updated&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;exampleDao.save(record);<br />
+}
+</div>
+<p>В данном случае первый запрос будет выполнен, а потом отменён и в таблице в БД новых записей так и не появится.</p>
+<p>Бывают такие ошибки, при которых откатывать транзакцию не требуется. Эти исключения вы можете перечислить при помощи параметра <strong>dontRollbackOn</strong>:</p>
+<div class="hl-div">
+<span class="hl-ann">@Transactional</span>(dontRollbackOn = {RuntimeException.<span class="hl-key">class</span>})
+</div>
+<p>Если мы сделаем так для нашего примера, то запись всё-таки будет создана, затем возникнет исключение, обновления уже не произойдёт, но транзакция всё равно будет завершена.</p>
+<p>Как Spring реализует механизм создания транзакций? Важно отметить, что @Transactional будет работать только для публичных методов, вызываемых из других компонентов. Это происходит потому что спринг делает вызов целевого метода через прокси-объект, имеющий такой же интерфейс, как и наш сервис. В этом прокси-объекте происходит открытие транзакции перед вызовом целевого метода. Затем, после завершения целевого метода, происходит закрытие транзакции. Если из метода вылетит исключение, транзакция будет отменена. Это поведение похоже на конструкцию <strong>try-catch</strong>. Можно представлять себе логику работы прокси так:</p>
+<div class="hl-div">
+<span class="hl-key">try</span> {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-com">// открытие транзакции</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-com">// вызов целевого метода</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-com">// commit</span><br />
+} <span class="hl-key">catch</span> (Exception e) {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-com">// rollback</span><br />
+}
+</div>
+<p>Если вы повесите @Transactional на какой-либо метод и вызовете его из того же сервиса, но из другого метода, механизм работать не будет, т.к. вызов не проходит через прокси. Это надо иметь в виду.</p>
+<div class="hl-div">
+<span class="hl-ann">@Service</span><br />
+<span class="hl-key">public</span> <span class="hl-key">class</span> ExampleService {<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">public</span> <span class="hl-key">void</span> doWrongTransaction() {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;doTransaction(); <span class="hl-com">// так транзакция работать не будет!</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-ann">@Transactional</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-key">public</span> <span class="hl-key">void</span> doTransaction() {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-com">// работа с БД</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+}
+</div>
+</div>
+            <br>
+        </div>
+        <div class="w3-col m1">
+            <p></p>
+        </div>
+        <div class="w3-col m3">
+            <h3>Облако тэгов</h3>
+            <p>
+                <span>
+                    <a href="/articles/tag/kotlin" title="28 статей" class="w3-text-blue w3-hover-text-orange">Kotlin</a>,
+                </span><span>
+                    <a href="/articles/tag/java" title="38 статей" class="w3-text-blue w3-hover-text-orange">Java</a>,
+                </span><span>
+                    <a href="/articles/tag/java-16" title="2 статьи" class="w3-text-blue w3-hover-text-orange">Java 16</a>,
+                </span><span>
+                    <a href="/articles/tag/java-11" title="6 статей" class="w3-text-blue w3-hover-text-orange">Java 11</a>,
+                </span><span>
+                    <a href="/articles/tag/java-10" title="10 статей" class="w3-text-blue w3-hover-text-orange">Java 10</a>,
+                </span><span>
+                    <a href="/articles/tag/java-9" title="2 статьи" class="w3-text-blue w3-hover-text-orange">Java 9</a>,
+                </span><span>
+                    <a href="/articles/tag/java-8" title="14 статей" class="w3-text-blue w3-hover-text-orange">Java 8</a>,
+                </span><span>
+                    <a href="/articles/tag/spring" title="29 статей" class="w3-text-blue w3-hover-text-orange">Spring</a>,
+                </span><span>
+                    <a href="/articles/tag/spring-boot" title="37 статей" class="w3-text-blue w3-hover-text-orange">Spring Boot</a>,
+                </span><span>
+                    <a href="/articles/tag/spring-data" title="11 статей" class="w3-text-blue w3-hover-text-orange">Spring Data</a>,
+                </span><span>
+                    <a href="/articles/tag/sql" title="13 статей" class="w3-text-blue w3-hover-text-orange">SQL</a>,
+                </span><span>
+                    <a href="/articles/tag/postgresql" title="22 статьи" class="w3-text-blue w3-hover-text-orange">PostgreSQL</a>,
+                </span><span>
+                    <a href="/articles/tag/oracle" title="1 статья" class="w3-text-blue w3-hover-text-orange">Oracle</a>,
+                </span><span>
+                    <a href="/articles/tag/hibernate" title="4 статьи" class="w3-text-blue w3-hover-text-orange">Hibernate</a>,
+                </span><span>
+                    <a href="/articles/tag/collections" title="14 статей" class="w3-text-blue w3-hover-text-orange">Collections</a>,
+                </span><span>
+                    <a href="/articles/tag/stream-api" title="10 статей" class="w3-text-blue w3-hover-text-orange">Stream API</a>,
+                </span><span>
+                    <a href="/articles/tag/concurrency" title="1 статья" class="w3-text-blue w3-hover-text-orange">многопоточность</a>,
+                </span><span>
+                    <a href="/articles/tag/input-output" title="9 статей" class="w3-text-blue w3-hover-text-orange">ввод-вывод</a>,
+                </span><span>
+                    <a href="/articles/tag/apache" title="7 статей" class="w3-text-blue w3-hover-text-orange">Apache</a>,
+                </span><span>
+                    <a href="/articles/tag/maven" title="13 статей" class="w3-text-blue w3-hover-text-orange">maven</a>,
+                </span><span>
+                    <a href="/articles/tag/gradle" title="16 статей" class="w3-text-blue w3-hover-text-orange">gradle</a>,
+                </span><span>
+                    <a href="/articles/tag/junit" title="1 статья" class="w3-text-blue w3-hover-text-orange">JUnit</a>,
+                </span><span>
+                    <a href="/articles/tag/youtube" title="16 статей" class="w3-text-blue w3-hover-text-orange">YouTube</a>,
+                </span><span>
+                    <a href="/articles/tag/news" title="15 статей" class="w3-text-blue w3-hover-text-orange">новости</a>,
+                </span><span>
+                    <a href="/articles/tag/oop" title="2 статьи" class="w3-text-blue w3-hover-text-orange">ООП</a>,
+                </span><span>
+                    <a href="/articles/tag/algorithms" title="10 статей" class="w3-text-blue w3-hover-text-orange">алгоритмы</a>,
+                </span><span>
+                    <a href="/articles/tag/puzzlers" title="4 статьи" class="w3-text-blue w3-hover-text-orange">головоломки</a>,
+                </span><span>
+                    <a href="/articles/tag/rest" title="22 статьи" class="w3-text-blue w3-hover-text-orange">rest</a>,
+                </span><span>
+                    <a href="/articles/tag/graphql" title="2 статьи" class="w3-text-blue w3-hover-text-orange">GraphQL</a>,
+                </span><span>
+                    <a href="/articles/tag/excel" title="2 статьи" class="w3-text-blue w3-hover-text-orange">Excel</a>,
+                </span><span>
+                    <a href="/articles/tag/xml" title="2 статьи" class="w3-text-blue w3-hover-text-orange">XML</a>,
+                </span><span>
+                    <a href="/articles/tag/json" title="5 статей" class="w3-text-blue w3-hover-text-orange">json</a>,
+                </span><span>
+                    <a href="/articles/tag/yaml" title="6 статей" class="w3-text-blue w3-hover-text-orange">yaml</a>.
+                </span>
+            </p>
+            <h3>Последние статьи</h3>
+            <ul>
+                <li>
+                    <a href="/article/spring-events" class="w3-text-blue w3-hover-text-orange">Работа с событиями в Spring</a>
+                </li>
+                <li>
+                    <a href="/article/spring-boot-scheduler-kotlin" class="w3-text-blue w3-hover-text-orange">Запуск задач по расписанию в Spring Boot проекте на Kotlin (видео)</a>
+                </li>
+                <li>
+                    <a href="/article/restful-spring-jdbc-api-kotlin" class="w3-text-blue w3-hover-text-orange">Restful-сервис на Spring JDBC и Kotlin (серия видео)</a>
+                </li>
+                <li>
+                    <a href="/article/spring-config-formats-comparison-kotlin" class="w3-text-blue w3-hover-text-orange">Видео о работе с конфигами в Spring Boot</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part7" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: &quot;один-ко-многим&quot;</a>
+                </li>
+                <li>
+                    <a href="/article/spring-initializr-gradle-kotlin-ultimate" class="w3-text-blue w3-hover-text-orange">Spring Initializr: создаём проект на Kotlin в Idea Ultimate</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part6" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: обработка ошибок</a>
+                </li>
+                <li>
+                    <a href="/article/spring-initializr-maven-java-ultimate" class="w3-text-blue w3-hover-text-orange">Spring Initializr: создаём проект на Java в Idea Ultimate</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part5" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: удаление записей</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part4" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: создание и обновление записей</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part3" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: поиск записи по id</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part2" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: подключаем БД</a>
+                </li>
+                <li>
+                    <a href="/article/spring-data-jpa-kotlin-part1" class="w3-text-blue w3-hover-text-orange">Видео по Spring Data JPA и Kotlin: заготовка проекта</a>
+                </li>
+                <li>
+                    <a href="/article/result-set-extractor" class="w3-text-blue w3-hover-text-orange">RowMapper и ResultSetExtractor в Spring Boot</a>
+                </li>
+                <li>
+                    <a href="/article/spring-initializr-maven-java" class="w3-text-blue w3-hover-text-orange">Spring Initializr: создаём maven-проект на Java</a>
+                </li>
+                <li>
+                    <a href="/article/spring-initializr-gradle-kotlin" class="w3-text-blue w3-hover-text-orange">Spring Initializr: создаём Gradle-проект на Kotlin</a>
+                </li>
+                <li>
+                    <a href="/article/devmark-ru-telegram-bot" class="w3-text-blue w3-hover-text-orange">У нашего сайта появился telegram-бот</a>
+                </li>
+                <li>
+                    <a href="/article/graphql-playground" class="w3-text-blue w3-hover-text-orange">Подключение Playground к GraphQL</a>
+                </li>
+                <li>
+                    <a href="/article/graphql-query" class="w3-text-blue w3-hover-text-orange">Обработка запросов с помощью GraphQL</a>
+                </li>
+                <li>
+                    <a href="/article/bubble-sort" class="w3-text-blue w3-hover-text-orange">Пузырьковая сортировка</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="w3-container">
+    <hr/>
+    <div class="w3-margin-bottom">
+        <div class="w3-row">
+            <div class="w3-col m2">
+                <p></p>
+            </div>
+            <div class="w3-col m6">
+                <h3>Комментарии</h3>
+            </div>
+        </div>
+        <div class="w3-row w3-margin-top">
+            <div class="w3-col m2">
+                <p></p>
+            </div>
+            <div class="w3-container w3-card-4 w3-light-grey w3-col m6">
+                <h4>Добавить комментарий</h4>
+                <p>
+                    <label>Ваше имя:</label>
+                    <input class="w3-input w3-border" type="text" id="comment-author">
+                </p>
+                <p>
+                    <label>Комментарий (обязательно):</label>
+                    <textarea class="w3-input w3-border" id="comment-text"></textarea>
+                </p>
+                <p>
+                    <button class="w3-button w3-blue" onclick="sendComment()">Добавить</button>
+                </p>
+            </div>
+        </div>
+
+        <div class="w3-row w3-margin-top">
+            <div class="w3-col m2">
+                <p></p>
+            </div>
+            <div class="w3-card-4 w3-col m6">
+                <header class="w3-container w3-light-gray">
+                    <p>
+                        <span>20.09.2021 11:08</span> <strong>Александр</strong>
+                    </p>
+                </header>
+                <div class="w3-container">
+                    <p>Идеально подана информация. Кратко и по делу. Спасибо!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="w3-row w3-margin-top">
+            <div class="w3-col m2">
+                <p></p>
+            </div>
+            <div class="w3-card-4 w3-col m6">
+                <header class="w3-container w3-light-gray">
+                    <p>
+                        <span>29.06.2021 22:17</span> <strong>devmark</strong>
+                    </p>
+                </header>
+                <div class="w3-container">
+                    <p>Речь тут идёт о том, что аннотация @Transactional на методе будет проигнорирована, если этот метод вызвать из того же класса, где он находится. Для работы транзакции нужно обязательно делать вызов из другого бина. Что мы и делаем, вызывая сервисный метод из контроллера.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="w3-row w3-margin-top">
+            <div class="w3-col m2">
+                <p></p>
+            </div>
+            <div class="w3-card-4 w3-col m6">
+                <header class="w3-container w3-light-gray">
+                    <p>
+                        <span>29.06.2021 21:28</span> <strong>Царский Евгений</strong>
+                    </p>
+                </header>
+                <div class="w3-container">
+                    <p>Хотелось бы прояснить последний момент: &quot;Если вы повесите @Transactional на какой-либо метод и вызовете его из того же сервиса, но из другого метода, механизм работать не будет, т.к. вызов не проходит через прокси&quot;. Что-то я тут не понял, ну так мы вызываем методы сервиса из контроллера, методы в контроллере не аннотированы @Transactional, а транзакция открывается. Или имеется в виду, что транзакция не будет открыта в том методе, который не аннотирован, даже если внутри него вызвать аннотированный метод (разумеется, сам аннотированный метод для себя откроет свою транзакцию)? </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    function sendComment() {
+        let request = {
+          module: document.querySelector('#comment-module').value,
+          key: document.querySelector('#comment-key').value,
+          author: document.querySelector('#comment-author').value,
+          text: document.querySelector('#comment-text').value
+        };
+
+        fetch('/comments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(request)
+        })
+            .then(response => response.json())
+            .then(resp => {
+                if (resp.success == true) {
+                    document.querySelector('#comment-author').value = '';
+                    document.querySelector('#comment-text').value = '';
+                    document.querySelector('#message-box-header').className = 'w3-container w3-green';
+                } else {
+                    document.querySelector('#message-box-header').className = 'w3-container w3-red';
+                }
+                document.querySelector('#message-box-text').innerText = resp.message;
+                document.querySelector('#message-box').style.display='block';
+            })
+    }
+
+    </script>
+</div>
+<div id="message-box" class="w3-modal">
+    <div class="w3-modal-content w3-animate-top w3-card-4">
+        <header class="w3-container w3-red" id="message-box-header">
+            <span onclick="document.querySelector('#message-box').style.display='none'" class="w3-button w3-display-topright">&times;</span>
+            <h2>devmark.ru</h2>
+        </header>
+        <div class="w3-container">
+            <p id="message-box-text" class="w3-large"></p>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="comment-module" value="article" />
+<input type="hidden" id="comment-key" value="spring-transaction-management" />
+
+</body>
+</html>
